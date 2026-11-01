@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: { tenant: string } 
 export default async function TenantHome({ params, searchParams }: { params: { tenant: string }; searchParams: { type?: string; city?: string } }) {
   const t = await requireTenant(params.tenant);
   const sb = supabaseServer();
-  let q = sb.from("properties").select("public_id,slug,title,price_minor,listing_type,locality,city,bedrooms,bathrooms,builtup_area,area_unit,availability,construction_status")
+  let q = sb.from("properties").select("public_id,slug,title,price_minor,listing_type,locality,city,bedrooms,bathrooms,builtup_area,area_unit,availability,construction_status,property_images(id,tenant_id,is_cover,sort_order,caption,status,kind)")
     .eq("tenant_id", t.id).eq("publication_status", "published").is("deleted_at", null).order("published_at", { ascending: false }).limit(48);
   if (searchParams.type === "sale" || searchParams.type === "rent") q = q.eq("listing_type", searchParams.type);
   if (searchParams.city) q = q.ilike("city", searchParams.city);

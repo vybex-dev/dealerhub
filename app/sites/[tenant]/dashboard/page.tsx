@@ -31,7 +31,7 @@ export default async function Dashboard() {
         <tbody>{props?.length ? props.map((p) => (
           <tr key={p.id}><td>{p.publication_status === "published" ? <Link href={`/properties/${p.slug}`}>{p.title}</Link> : p.title}</td>
             <td>{formatPrice(p.price_minor)}</td><td><span className="pill">{p.publication_status}</span></td>
-            <td><form action={setPublication} style={{display:"flex",gap:8}}><input type="hidden" name="id" value={p.id} />
+            <td><form action={setPublication} style={{display:"flex",gap:8,alignItems:"center"}}><Link href={`/dashboard/properties/${p.id}/edit`}>Edit</Link><input type="hidden" name="id" value={p.id} />
               {p.publication_status !== "published" && <button className="btn" name="to" value="published">Publish</button>}
               {p.publication_status === "published" && <button className="btn ghost" name="to" value="unpublished">Unpublish</button>}
               {p.publication_status !== "archived" && <button className="btn ghost" name="to" value="archived">Archive</button>}

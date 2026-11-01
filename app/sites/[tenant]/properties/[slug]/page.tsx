@@ -5,10 +5,12 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { formatPrice, idFromSlug } from "@/lib/format";
 import EnquiryForm from "@/components/EnquiryForm";
 import PropertyCard from "@/components/PropertyCard";
+import Gallery from "@/components/Gallery";
+import { readyPhotos } from "@/lib/image-urls";
 
 async function load(tenantId: string, slug: string) {
   const pid = idFromSlug(slug); if (!pid) return null;
-  const { data } = await supabaseServer().from("properties").select("*")
+  const { data } = await supabaseServer().from("properties").select("*, property_images(id,tenant_id,is_cover,sort_order,caption,status,kind)")
     .eq("tenant_id", tenantId).eq("public_id", pid).eq("publication_status", "published").is("deleted_at", null).maybeSingle();
   return data;
 }
@@ -35,7 +37,7 @@ export default async function PropertyPage({ params }: { params: { tenant: strin
   ];
   const rows = overview.filter(([, v]) => v != null && v !== "");
   const { data: similar } = await supabaseServer().from("properties")
-    .select("public_id,slug,title,price_minor,listing_type,locality,city,bedrooms,bathrooms,builtup_area,area_unit,availability,construction_status")
+    .select("public_id,slug,title,price_minor,listing_type,locality,city,bedrooms,bathrooms,builtup_area,area_unit,availability,construction_status,property_images(id,tenant_id,is_cover,sort_order,caption,status,kind)")
     .eq("tenant_id", t.id).eq("publication_status", "published").is("deleted_at", null).neq("id", p.id).eq("listing_type", p.listing_type).limit(4);
 
   const nav = [rows.length && "Overview", p.description && "Property Info", "Price", p.locality && "Location", similar?.length && "Similar Properties"].filter(Boolean) as string[];
@@ -52,9 +54,7 @@ export default async function PropertyPage({ params }: { params: { tenant: strin
       </nav>
       <div className="two">
         <div>
-          <div className="card" style={{aspectRatio:"16/9",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--muted)",position:"relative"}}>
-            <span className="badge">{p.listing_type === "sale" ? "For sale" : "For rent"}</span>Photo gallery arrives in the next phase
-          </div>
+          <Gallery images={readyPhotos(p.property_images)} badge={p.listing_type === "sale" ? "For sale" : "For rent"} title={p.title} />
           <div style={{display:"flex",justifyContent:"space-between",gap:16,flexWrap:"wrap",margin:"22px 0"}}>
             <div className="price" style={{fontSize:"2rem"}}>{formatPrice(p.price_minor)}</div>
             <div style={{maxWidth:420}}><h1 style={{fontSize:"1.15rem",margin:0}}>{p.title}</h1>

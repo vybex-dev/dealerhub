@@ -1,8 +1,8 @@
-# DealerHub: Phase 1 vertical slice
+# DealerHub: Phases 1-2
 
 Signup → tenant creation → add property → public property page → enquiry → dealer dashboard.
 
-**Status:** compiles, typechecks, and 12 unit tests pass (hostname routing, subdomain validation, price formatting, slugs).
+**Status:** compiles, typechecks, and 22 unit tests pass (routing, validation, slugs, image processing).
 **Not yet verified:** nothing has been run against a live Supabase project or a browser. The RLS isolation script
 (`supabase/tests/isolation.sql`) is written but has not been executed. Billing, photos and email are NOT implemented.
 
@@ -39,6 +39,33 @@ Signup → tenant creation → add property → public property page → enquiry
 - No email notifications, no photos, no subscription gating (`tenants.status` only), no edit-property page, no EMI calculator or map yet.
 - Tenant pages are `no-store`; tagged caching comes with the public-site milestone.
 
-## Images (next phase)
-Recommended: Cloudflare R2 for storage (no egress fees) with sharp-generated variants at upload, served via a
-custom domain on Cloudflare's CDN. Supabase Storage is simpler but costs more at image-heavy scale. Verify current pricing first.
+## Phase 2: photos and property editing
+Run `supabase/migrations/0002_images.sql` after 0001. Then fill in the R2 variables in `.env.example`.
+
+**Flow:** browser asks `/api/uploads/init` (auth, tenant, photo-count and storage checks) → uploads straight to a
+**private** R2 bucket with a 5-minute signed URL (this avoids Vercel's ~4.5 MB request-body limit) → `/api/uploads/finalize`
+re-reads the file, verifies the real content with sharp, strips EXIF/GPS, writes thumb/medium/large WebP variants to a
+**public** bucket, deletes the raw file, and records the real stored size. First ready photo becomes the cover.
+
+**Cloudflare setup (verify against current docs):**
+1. Create two buckets: `R2_BUCKET_PRIVATE` (no public access) and `R2_BUCKET_PUBLIC`.
+2. Attach a custom domain (e.g. `img.yourdomain.com`) to the public bucket and set `NEXT_PUBLIC_IMAGE_BASE_URL`.
+3. Add a CORS rule on the **private** bucket allowing `PUT` with header `Content-Type` from your site origins. If R2 does not
+   accept wildcard subdomain origins, allow `*` for PUT only: uploads are still gated by the short-lived signed URL.
+4. Create an R2 API token limited to those two buckets.
+
+**Limits until plans exist (Phase 7):** `MAX_PHOTOS_PER_PROPERTY` (20), `MAX_STORAGE_BYTES` (500 MB), 8 MB per file, 40 MP per image.
+
+**Cleanup:** `vercel.json` schedules `/api/cron/cleanup` daily. It removes uploads still pending after an hour. Set `CRON_SECRET`.
+Check that your Vercel plan allows the cron frequency.
+
+**Publishing now requires** price, city, locality and at least one photo.
+
+**Tests:** `supabase/tests/isolation_images.sql` (run like the Phase 1 script).
+
+## Known Phase 2 limitations
+- Signed upload URLs do not hard-enforce size at R2; oversize or fake files are rejected and deleted at finalize.
+- The photo-count and storage checks are not atomic: two simultaneous uploads could slightly exceed a limit.
+- Variant URLs are unguessable (UUID) but public once processed, including for draft listings. Drafts are not listed anywhere.
+- Reordering uses up/down buttons (no drag and drop). No floor plans or video yet.
+- Not yet run against real R2/Supabase. No Open Graph image, map, or EMI calculator yet.

@@ -7,7 +7,7 @@ export default async function NewProperty() {
   return (<main className="wrap" style={{maxWidth:760,paddingTop:32}}>
     <p><Link href="/dashboard">Back to dashboard</Link></p>
     <h1>Add property</h1>
-    <p style={{color:"var(--muted)"}}>Photos, amenities and floor plans arrive in the next phase.</p>
+    <p style={{color:"var(--muted)"}}>You will add photos on the next screen.</p>
     <div className="card pad"><PropertyForm /></div>
   </main>);
 }
